@@ -12,7 +12,8 @@ inThisBuild(
       "-Wunused:imports"
     ),
     scalafixScalaBinaryVersion := "2.13",
-    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0"
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0",
+    fork := true
   )
 )
 
@@ -27,6 +28,8 @@ lazy val root = (project in file("."))
       `zio-test-magnolia`,
       slick,
       `slick-hikaricp`,
+      `zio-slick-interop`,
+      postgres,
       logback
     )
   )

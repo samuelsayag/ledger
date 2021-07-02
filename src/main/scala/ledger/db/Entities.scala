@@ -5,6 +5,7 @@ import ledger.business.model.UserId
 import slick.jdbc.JdbcProfile
 import ledger.business.model.AccountId
 import slick.sql.SqlProfile
+import slick.lifted.ForeignKeyQuery
 
 trait Profile {
   val profile: JdbcProfile
@@ -41,35 +42,41 @@ trait Entities extends EntityIdMappers {
   val users: TableQuery[Users] = TableQuery[self.Users]
 
   class Accounts(tag: Tag)
-      extends Table[(AccountId, BigDecimal, String)](tag, "accounts") {
+      extends Table[(AccountId, BigDecimal, String, UserId)](tag, "accounts") {
     def id: Rep[AccountId] = column[AccountId]("id", O.PrimaryKey, O.AutoInc)
     def balance: Rep[BigDecimal] = column[BigDecimal]("balance")
     def accountType: Rep[String] = column[String]("accountType")
-    def userId: Rep[UserId] = column[UserId]("userid", Nullable)
-    def * = (id, balance, accountType)
-    def accountUsers = foreignKey("ACC_USER_FK", userId, users)(
-      _.id,
-      onUpdate = ForeignKeyAction.Restrict,
-      onDelete = ForeignKeyAction.Cascade
-    )
+    def userId: Rep[UserId] = column[UserId]("userId", Nullable)
+    def * = (id, balance, accountType, userId)
+    def accountUsers: ForeignKeyQuery[Users, User] =
+      foreignKey("ACC_USER_FK", userId, users)(
+        _.id,
+        onUpdate = ForeignKeyAction.Restrict,
+        onDelete = ForeignKeyAction.Cascade
+      )
   }
 
   val accounts: TableQuery[Accounts] = TableQuery[self.Accounts]
 
   class Transactions(tag: Tag)
-      extends Table[(Long, AccountId, String, BigDecimal)](tag, "accounts") {
+      extends Table[(Long, AccountId, String, BigDecimal)](
+        tag,
+        "transactions"
+      ) {
     def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def accountId: Rep[AccountId] = column[AccountId]("accountId")
     def transactionType: Rep[String] = column[String]("transactionType")
     def amount: Rep[BigDecimal] = column[BigDecimal]("amount", Nullable)
     def * = (id, accountId, transactionType, amount)
-    def tranAccounts = foreignKey("TRAN_ACC_FK", accountId, accounts)(
-      _.id,
-      onUpdate = ForeignKeyAction.Restrict,
-      onDelete = ForeignKeyAction.NoAction
-    )
+    def tranAccounts
+        : ForeignKeyQuery[Accounts, (AccountId, BigDecimal, String, UserId)] =
+      foreignKey("TRAN_ACC_FK", accountId, accounts)(
+        _.id,
+        onUpdate = ForeignKeyAction.Restrict,
+        onDelete = ForeignKeyAction.NoAction
+      )
 
-    val transactions: TableQuery[Transactions] = TableQuery[self.Transactions]
   }
 
+  val transactions: TableQuery[Transactions] = TableQuery[self.Transactions]
 }

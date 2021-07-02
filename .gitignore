@@ -6,4 +6,6 @@ target/
 .metals/
 .bsp/
 
+.idea/
+
 
