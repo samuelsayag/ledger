@@ -1,5 +1,6 @@
 package ledger.business
 
+import zio.{IO, ZIO}
 import zio.prelude._
 
 package object model {
@@ -22,8 +23,33 @@ package object model {
     */
   sealed trait AccountType
   object AccountType {
-    case object Cash extends AccountType
+    case object Cash extends AccountType {
+      def make(s: String): IO[IllegalArgumentException, AccountType] =
+        if (s.toUpperCase == "CASH") ZIO.succeed(Cash: AccountType)
+        else
+          ZIO.fail(new IllegalArgumentException(s"Expected 'CASH' found [$s]"))
+    }
     final case class Deposit(owner: User) extends AccountType
+    object Deposit {
+      def make(
+          s: String,
+          user: User
+      ): IO[IllegalArgumentException, AccountType] =
+        if (s.toUpperCase == "DEPOSIT") ZIO.succeed(Deposit(user))
+        else
+          ZIO.fail(
+            new IllegalArgumentException(s"Expected 'DEPOSIT' found [$s]")
+          )
+    }
+
+    def make(
+        accountType: String,
+        user: Option[User]
+    ): IO[IllegalArgumentException, AccountType] =
+      (accountType, user) match {
+        case (at, Some(user)) => Deposit.make(at, user)
+        case (at, None)       => Cash.make(at)
+      }
   }
 
   /** A general class for all types of accounts
