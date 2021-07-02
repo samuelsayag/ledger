@@ -19,14 +19,8 @@ object Boot extends ZIOApp {
 
   lazy val program = initDb
 
-  lazy val initDb: RIO[Has[InitDb] with Console with Clock, Int] = {
-    val debugSchema = InitDb.creabaseDebug() >>= (schema => putStrLn(schema))
-    debugSchema *>
-      InitDb.checkConnection() *>
-      InitDb.createSchemaIfMissing() *>
-      putStrLn(s"Create the schema") *>
-      ZIO.succeed(1)
-  }
+  lazy val initDb: RIO[Has[InitDb] with Console with Clock, Int] =
+    InitDb.initDb *> ZIO.succeed(1)
 
   def appEnvironment(typeSafeconfig: Config): TaskLayer[Has[InitDb]] = {
 

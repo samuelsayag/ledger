@@ -60,11 +60,16 @@ object InitDb {
     checkConnection().orElse(creabase().retry(Schedule.recurs(3))) *> ZIO.unit
   }
 
+  val initDb: ZIO[Has[InitDb] with Console with Clock, Throwable, Unit] =
+    (InitDb.creabaseDebug() >>= (schema => putStrLn(schema))) *>
+      InitDb.createSchemaIfMissing() *>
+      putStrLn(s"Schema created or was present...")
+
 }
 
 case class InitDbLive(
-    // TODO - see if the parameter can be define such that only
-    //  the DatabaseProvider is required
+    // TODO - see if the parameter can be define such that
+    //  only the DatabaseProvider is required
     dbp: DatabaseProvider,
     profile: JdbcProfile
 ) extends InitDb

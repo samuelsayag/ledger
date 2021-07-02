@@ -8,4 +8,7 @@ target/
 
 .idea/
 
+logs/
+log/
+
 
