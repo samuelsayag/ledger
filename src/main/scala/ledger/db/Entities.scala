@@ -1,13 +1,6 @@
 package ledger.db
 
-import ledger.business.model.{
-  AccountId,
-  Amount,
-  PostingId,
-  TransactionId,
-  User,
-  UserId
-}
+import ledger.business.model.{AccountId, Amount, PostingId, TransactionId, User, UserId}
 import slick.jdbc.JdbcProfile
 import slick.sql.SqlProfile
 import slick.lifted.ForeignKeyQuery
@@ -57,20 +50,19 @@ trait Entities extends EntityIdMappers {
   import SqlProfile.ColumnOption._
 
   class Users(tag: Tag) extends Table[User](tag, "users") {
-    def id: Rep[UserId] = column[UserId]("id", O.PrimaryKey, O.AutoInc)
+    def id: Rep[UserId]   = column[UserId]("id", O.PrimaryKey, O.AutoInc)
     def name: Rep[String] = column[String]("name")
-    def * = (id, name).<>((User.apply _).tupled, User.unapply)
+    def *                 = (id, name).<>((User.apply _).tupled, User.unapply)
   }
 
   val users: TableQuery[Users] = TableQuery[self.Users]
 
-  class Accounts(tag: Tag)
-      extends Table[(AccountId, Amount, String, UserId)](tag, "accounts") {
-    def id: Rep[AccountId] = column[AccountId]("id", O.PrimaryKey, O.AutoInc)
-    def balance: Rep[Amount] = column[Amount]("balance")
+  class Accounts(tag: Tag) extends Table[(AccountId, Amount, String, UserId)](tag, "accounts") {
+    def id: Rep[AccountId]       = column[AccountId]("id", O.PrimaryKey, O.AutoInc)
+    def balance: Rep[Amount]     = column[Amount]("balance")
     def accountType: Rep[String] = column[String]("accountType")
-    def userId: Rep[UserId] = column[UserId]("userId", Nullable)
-    def * = (id, balance, accountType, userId)
+    def userId: Rep[UserId]      = column[UserId]("userId", Nullable)
+    def *                        = (id, balance, accountType, userId)
     def accountUsers: ForeignKeyQuery[Users, User] =
       foreignKey("ACC_USER_FK", userId, users)(
         _.id,
@@ -92,9 +84,8 @@ trait Entities extends EntityIdMappers {
     def transactionType: Rep[String] =
       column[String]("transactionType", NotNull)
     def amount: Rep[Amount] = column[Amount]("amount", NotNull)
-    def * = (id, accountId, transactionType, amount)
-    def tranAccounts
-        : ForeignKeyQuery[Accounts, (AccountId, Amount, String, UserId)] =
+    def *                   = (id, accountId, transactionType, amount)
+    def tranAccounts: ForeignKeyQuery[Accounts, (AccountId, Amount, String, UserId)] =
       foreignKey("TRAN_ACC_FK", accountId, accounts)(
         _.id,
         onUpdate = ForeignKeyAction.Restrict,
@@ -114,9 +105,9 @@ trait Entities extends EntityIdMappers {
     def transactionId: Rep[TransactionId] =
       column[TransactionId]("transactionId", NotNull)
     def accountId: Rep[AccountId] = column[AccountId]("accountId", NotNull)
-    def credit: Rep[Amount] = column[Amount]("credit", Nullable)
-    def debit: Rep[Amount] = column[Amount]("debit", Nullable)
-    def * = (id, transactionId, accountId, credit, debit)
+    def credit: Rep[Amount]       = column[Amount]("credit", Nullable)
+    def debit: Rep[Amount]        = column[Amount]("debit", Nullable)
+    def *                         = (id, transactionId, accountId, credit, debit)
     def postingTransaction: ForeignKeyQuery[
       Transactions,
       (TransactionId, AccountId, String, Amount)
@@ -127,8 +118,7 @@ trait Entities extends EntityIdMappers {
         onDelete = ForeignKeyAction.Cascade
       )
 
-    def postingAcc
-        : ForeignKeyQuery[Accounts, (AccountId, Amount, String, UserId)] =
+    def postingAcc: ForeignKeyQuery[Accounts, (AccountId, Amount, String, UserId)] =
       foreignKey("POST_ACC_FK", accountId, accounts)(
         _.id,
         onUpdate = ForeignKeyAction.Restrict,

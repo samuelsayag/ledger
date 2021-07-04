@@ -42,10 +42,9 @@ object InitDb {
   // TODO - use zio logging here
   // TODO - configurable space schedule
   // TDOD - make it generic with a parameter
-  def checkConnection()
-      : ZIO[Has[InitDb] with Console with Clock, Exception, Int] = {
+  def checkConnection(): ZIO[Has[InitDb] with Console with Clock, Exception, Int] = {
     val notAvailable = (_: String).contains("Connection is not available")
-    val spaced1Sec = Schedule.spaced(1.second)
+    val spaced1Sec   = Schedule.spaced(1.second)
     checkbase()
       .refineOrDie {
         case e: Exception if (notAvailable(e.getMessage)) => e
@@ -54,8 +53,7 @@ object InitDb {
       .retry(spaced1Sec)
   }
 
-  def createSchemaIfMissing()
-      : RIO[Has[InitDb] with Console with Clock, Unit] = {
+  def createSchemaIfMissing(): RIO[Has[InitDb] with Console with Clock, Unit] = {
     val spaced1Sec = Schedule.spaced(1.second)
     checkConnection().orElse(creabase().retry(Schedule.recurs(3))) *> ZIO.unit
   }

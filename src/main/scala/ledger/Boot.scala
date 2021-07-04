@@ -12,9 +12,7 @@ object Boot extends ZIOApp {
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
     ZIO(ConfigFactory.load.resolve)
-      .flatMap(typeSafeConfig =>
-        program.provideCustomLayer(appEnvironment(typeSafeConfig))
-      )
+      .flatMap(typeSafeConfig => program.provideCustomLayer(appEnvironment(typeSafeConfig)))
       .exitCode
 
   lazy val program = initDb

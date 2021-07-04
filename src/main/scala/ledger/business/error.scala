@@ -6,6 +6,6 @@ object error {
 
   object DomainError {
     final case class RepositoryError(cause: Exception) extends DomainError
-    final case class ValidationError(msg: String) extends DomainError
+    final case class ValidationError(msg: String)      extends DomainError
   }
 }

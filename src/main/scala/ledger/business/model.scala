@@ -1,6 +1,7 @@
 package ledger.business
 
-import zio.{IO, ZIO}
+import ledger.business.error.DomainError
+import zio._
 import zio.prelude._
 
 package object model {
@@ -66,17 +67,10 @@ package object model {
 
   sealed trait TransactionType
   object TransactionType {
-    case object Deposit extends TransactionType
+    case object Deposit  extends TransactionType
     case object Withdraw extends TransactionType
-    case object Book extends TransactionType
+    case object Book     extends TransactionType
   }
-
-  final case class TransactionData(
-      user: User,
-      accountNumber: AccountId,
-      transactionType: TransactionType,
-      amount: BigDecimal
-  )
 
   object TransactionId extends Subtype[Long]
   type TransactionId = TransactionId.Type
@@ -84,6 +78,12 @@ package object model {
   object Amount extends Subtype[BigDecimal]
   type Amount = Amount.Type
 
+  final case class TransactionData(
+      user: User,
+      accountNumber: AccountId,
+      transactionType: TransactionType,
+      amount: BigDecimal
+  )
   final case class Transaction(
       id: TransactionId,
       accountNumber: AccountId,
@@ -94,11 +94,17 @@ package object model {
   sealed trait TransferType
   object TransferType {
     case object Credit extends TransferType
-    case object Debit extends TransferType
+    case object Debit  extends TransferType
   }
 
   object PostingId extends Subtype[Long]
   type PostingId = PostingId.Type
+
+  final case class PostingData(
+      accountNumber: AccountId,
+      amount: Amount,
+      transferType: TransferType
+  )
 
   final case class Posting(
       id: PostingId,
@@ -107,4 +113,62 @@ package object model {
       amount: Amount,
       transferType: TransferType
   )
+
+  object Posting {
+    def fromTransaction(
+        tran: Transaction,
+        unitCashAccount: Option[AccountId],
+        userDepositAccount: Option[AccountId]
+    ): IO[DomainError, List[PostingData]] = {
+      tran.transactionType match {
+        case TransactionType.Deposit =>
+          unitCashAccount
+            .map(cashAccount =>
+              ZIO.succeed(
+                List(
+                  PostingData(tran.accountNumber, tran.amount, TransferType.Credit),
+                  PostingData(cashAccount, tran.amount, TransferType.Debit)
+                )
+              )
+            )
+            .getOrElse(
+              ZIO.fail(
+                DomainError.ValidationError("Required Unit Cash Account")
+              )
+            )
+
+        case TransactionType.Withdraw =>
+          unitCashAccount
+            .map(cashAccount =>
+              ZIO.succeed(
+                List(
+                  PostingData(tran.accountNumber, tran.amount, TransferType.Debit),
+                  PostingData(cashAccount, tran.amount, TransferType.Credit)
+                )
+              )
+            )
+            .getOrElse(
+              ZIO.fail(
+                DomainError.ValidationError("Required Unit Cash Account")
+              )
+            )
+
+        case TransactionType.Book =>
+          userDepositAccount
+            .map(userAccount =>
+              ZIO.succeed(
+                List(
+                  PostingData(tran.accountNumber, tran.amount, TransferType.Credit),
+                  PostingData(userAccount, tran.amount, TransferType.Debit)
+                )
+              )
+            )
+            .getOrElse(
+              ZIO.fail(
+                DomainError.ValidationError("Required User Account to perform debit")
+              )
+            )
+      }
+    }
+  }
 }
