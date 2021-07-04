@@ -79,7 +79,7 @@ package object model {
   type Amount = Amount.Type
 
   final case class TransactionData(
-      user: User,
+      user: UserData,
       accountNumber: AccountId,
       transactionType: TransactionType,
       amount: BigDecimal

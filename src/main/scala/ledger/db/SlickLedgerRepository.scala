@@ -73,12 +73,13 @@ object SlickLedgerRepository {
           override def doTransaction(
               trans: model.TransactionData
           ): IO[error.DomainError, model.Posting] = {
-            // val accountId = accounts.filter(_.id === trans.accountNumber)
-            // accountNumber: AccountId,
-            // transactionType: TransactionType,
-            // amount: BigDecimal
+
             ???
           }
+
+          private def insertTransaction(data: TransactionData) = ???
+          private def insertPostings(data: List[PostingData])  = ???
+          private def checkBalance(userData: UserData)         = ???
 
           override def getBalance(
               user: model.UserData,
