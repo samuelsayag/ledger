@@ -2,7 +2,7 @@ package ledger.db
 
 import ledger.business.error.DomainError
 import ledger.business.error.DomainError.RepositoryError
-import ledger.business.model.{Account, AccountId, AccountType, User, UserId}
+import ledger.business.model._
 import ledger.business.{LedgerRepository, error, model}
 import slick.interop.zio.DatabaseProvider
 import slick.interop.zio.syntax._
@@ -30,7 +30,9 @@ object SlickLedgerRepository {
               // TODO - work on a way to constrain this ("DEPOSIT")
               def insAcc(userId: Long) =
                 (accounts returning accounts.map(_.id)) +=
-                  (AccountId(dummyId), BigDecimal(0.0), "DEPOSIT", UserId(
+                  (AccountId(dummyId), Amount(
+                    BigDecimal(0.0)
+                  ), "DEPOSIT", UserId(
                     userId
                   ))
 
@@ -71,7 +73,13 @@ object SlickLedgerRepository {
 
             override def doTransaction(
                 trans: model.TransactionData
-            ): IO[error.DomainError, model.Posting] = ???
+            ): IO[error.DomainError, model.Posting] = {
+              // val accountId = accounts.filter(_.id === trans.accountNumber)
+              // accountNumber: AccountId,
+              // transactionType: TransactionType,
+              // amount: BigDecimal
+              ???
+            }
 
             override def getBalance(
                 user: model.UserData,

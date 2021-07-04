@@ -1,9 +1,14 @@
 package ledger.db
 
-import ledger.business.model.User
-import ledger.business.model.UserId
+import ledger.business.model.{
+  AccountId,
+  Amount,
+  PostingId,
+  TransactionId,
+  User,
+  UserId
+}
 import slick.jdbc.JdbcProfile
-import ledger.business.model.AccountId
 import slick.sql.SqlProfile
 import slick.lifted.ForeignKeyQuery
 
@@ -26,6 +31,24 @@ trait EntityIdMappers {
       ent => ent,
       value => AccountId(value)
     )
+
+  implicit def transactionIdMapper: BaseColumnType[TransactionId] =
+    MappedColumnType.base[TransactionId, Long](
+      ent => ent,
+      value => TransactionId(value)
+    )
+
+  implicit def amountMapper: BaseColumnType[Amount] =
+    MappedColumnType.base[Amount, BigDecimal](
+      ent => ent,
+      value => Amount(value)
+    )
+
+  implicit def postingIdMapper: BaseColumnType[PostingId] =
+    MappedColumnType.base[PostingId, Long](
+      ent => ent,
+      value => PostingId(value)
+    )
 }
 
 trait Entities extends EntityIdMappers {
@@ -42,9 +65,9 @@ trait Entities extends EntityIdMappers {
   val users: TableQuery[Users] = TableQuery[self.Users]
 
   class Accounts(tag: Tag)
-      extends Table[(AccountId, BigDecimal, String, UserId)](tag, "accounts") {
+      extends Table[(AccountId, Amount, String, UserId)](tag, "accounts") {
     def id: Rep[AccountId] = column[AccountId]("id", O.PrimaryKey, O.AutoInc)
-    def balance: Rep[BigDecimal] = column[BigDecimal]("balance")
+    def balance: Rep[Amount] = column[Amount]("balance")
     def accountType: Rep[String] = column[String]("accountType")
     def userId: Rep[UserId] = column[UserId]("userId", Nullable)
     def * = (id, balance, accountType, userId)
@@ -59,24 +82,59 @@ trait Entities extends EntityIdMappers {
   val accounts: TableQuery[Accounts] = TableQuery[self.Accounts]
 
   class Transactions(tag: Tag)
-      extends Table[(Long, AccountId, String, BigDecimal)](
+      extends Table[(TransactionId, AccountId, String, Amount)](
         tag,
         "transactions"
       ) {
-    def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def accountId: Rep[AccountId] = column[AccountId]("accountId")
-    def transactionType: Rep[String] = column[String]("transactionType")
-    def amount: Rep[BigDecimal] = column[BigDecimal]("amount", Nullable)
+    def id: Rep[TransactionId] =
+      column[TransactionId]("id", O.PrimaryKey, O.AutoInc)
+    def accountId: Rep[AccountId] = column[AccountId]("accountId", NotNull)
+    def transactionType: Rep[String] =
+      column[String]("transactionType", NotNull)
+    def amount: Rep[Amount] = column[Amount]("amount", NotNull)
     def * = (id, accountId, transactionType, amount)
     def tranAccounts
-        : ForeignKeyQuery[Accounts, (AccountId, BigDecimal, String, UserId)] =
+        : ForeignKeyQuery[Accounts, (AccountId, Amount, String, UserId)] =
       foreignKey("TRAN_ACC_FK", accountId, accounts)(
         _.id,
         onUpdate = ForeignKeyAction.Restrict,
-        onDelete = ForeignKeyAction.NoAction
+        onDelete = ForeignKeyAction.Cascade
       )
 
   }
 
   val transactions: TableQuery[Transactions] = TableQuery[self.Transactions]
+
+  class Postings(tag: Tag)
+      extends Table[(PostingId, TransactionId, AccountId, Amount, Amount)](
+        tag,
+        "postings"
+      ) {
+    def id: Rep[PostingId] = column[PostingId]("id", O.PrimaryKey, O.AutoInc)
+    def transactionId: Rep[TransactionId] =
+      column[TransactionId]("transactionId", NotNull)
+    def accountId: Rep[AccountId] = column[AccountId]("accountId", NotNull)
+    def credit: Rep[Amount] = column[Amount]("credit", Nullable)
+    def debit: Rep[Amount] = column[Amount]("debit", Nullable)
+    def * = (id, transactionId, accountId, credit, debit)
+    def postingTransaction: ForeignKeyQuery[
+      Transactions,
+      (TransactionId, AccountId, String, Amount)
+    ] =
+      foreignKey("POST_TRAN_FK", transactionId, transactions)(
+        _.id,
+        onUpdate = ForeignKeyAction.Restrict,
+        onDelete = ForeignKeyAction.Cascade
+      )
+
+    def postingAcc
+        : ForeignKeyQuery[Accounts, (AccountId, Amount, String, UserId)] =
+      foreignKey("POST_ACC_FK", accountId, accounts)(
+        _.id,
+        onUpdate = ForeignKeyAction.Restrict,
+        onDelete = ForeignKeyAction.Cascade
+      )
+  }
+
+  val postings: TableQuery[Postings] = TableQuery[self.Postings]
 }

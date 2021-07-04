@@ -72,6 +72,7 @@ package object model {
   }
 
   final case class TransactionData(
+      user: User,
       accountNumber: AccountId,
       transactionType: TransactionType,
       amount: BigDecimal
@@ -80,11 +81,14 @@ package object model {
   object TransactionId extends Subtype[Long]
   type TransactionId = TransactionId.Type
 
+  object Amount extends Subtype[BigDecimal]
+  type Amount = Amount.Type
+
   final case class Transaction(
-      id: Long,
+      id: TransactionId,
       accountNumber: AccountId,
       transactionType: TransactionType,
-      amount: BigDecimal
+      amount: Amount
   )
 
   sealed trait TransferType
@@ -93,11 +97,14 @@ package object model {
     case object Debit extends TransferType
   }
 
+  object PostingId extends Subtype[Long]
+  type PostingId = PostingId.Type
+
   final case class Posting(
-      id: Long,
+      id: PostingId,
       transactionId: TransactionId,
       accountNumber: AccountId,
-      amount: BigDecimal,
+      amount: Amount,
       transferType: TransferType
   )
 }
