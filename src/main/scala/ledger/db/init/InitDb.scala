@@ -1,5 +1,6 @@
 package ledger.db.init
 
+import ledger.business.model.{AccountId, Amount, UserId}
 import ledger.db.{Entities, Profile}
 import slick.interop.zio.DatabaseProvider
 import slick.interop.zio.syntax._
@@ -41,22 +42,22 @@ object InitDb {
   // TODO - more robust fail connection detection
   // TODO - use zio logging here
   // TODO - configurable space schedule
-  // TDOD - make it generic with a parameter
+  // TODO - make it generic with a parameter
   def checkConnection(): ZIO[Has[InitDb] with Console with Clock, Exception, Int] = {
     val notAvailable = (_: String).contains("Connection is not available")
     val spaced1Sec   = Schedule.spaced(1.second)
     checkbase()
       .refineOrDie {
-        case e: Exception if (notAvailable(e.getMessage)) => e
+        case e: Exception if notAvailable(e.getMessage) => e
       }
       .tapError(_ => putStrLn(s"Database not available..."))
       .retry(spaced1Sec)
   }
 
-  def createSchemaIfMissing(): RIO[Has[InitDb] with Console with Clock, Unit] = {
-    val spaced1Sec = Schedule.spaced(1.second)
-    checkConnection().orElse(creabase().retry(Schedule.recurs(3))) *> ZIO.unit
-  }
+  def createSchemaIfMissing(): RIO[Has[InitDb] with Console with Clock, Unit] =
+    checkConnection().orElse(
+      creabase().retry(Schedule.recurs(3) && Schedule.spaced(1.second))
+    ) *> ZIO.unit
 
   val initDb: ZIO[Has[InitDb] with Console with Clock, Throwable, Unit] =
     (InitDb.creabaseDebug() >>= (schema => putStrLn(schema))) *>
@@ -82,7 +83,14 @@ case class InitDbLive(
   }
 
   override def creabase(): Task[Unit] =
-    ZIO.fromDBIO(DBIO.seq(schemaBase.createIfNotExists)).provide(Has(dbp))
+    ZIO
+      .fromDBIO(
+        DBIO.seq(
+          schemaBase.createIfNotExists,
+          accounts += (AccountId(0L), Amount(BigDecimal(0)), "CASH", Option.empty[UserId])
+        )
+      )
+      .provide(Has(dbp))
 
   override def creabaseDebug(): UIO[String] =
     ZIO.succeed(

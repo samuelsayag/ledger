@@ -12,7 +12,7 @@ trait LedgerRepository {
 
   def createDepositAccount(user: UserData): IO[DomainError, Account]
 
-  def doTransaction(trans: TransactionData): IO[DomainError, Posting]
+  def doTransaction(user: UserData, trans: TransactionData): IO[DomainError, Posting]
 
   def getBalance(user: UserData, account: AccountId): IO[DomainError, Account]
 }
@@ -25,9 +25,10 @@ object LedgerRepository {
     ZIO.accessM(_.get.createDepositAccount(user))
 
   def doTransaction(
+      user: UserData,
       trans: TransactionData
   ): ZIO[Has[LedgerRepository], DomainError, Posting] =
-    ZIO.accessM(_.get.doTransaction(trans))
+    ZIO.accessM(_.get.doTransaction(user, trans))
 
   def getBalance(
       user: UserData,

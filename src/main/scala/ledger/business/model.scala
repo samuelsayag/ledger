@@ -14,7 +14,7 @@ package object model {
   object UserId extends Subtype[Long]
   type UserId = UserId.Type
 
-  final case class User(id: UserId, name: String)
+  final case class User(id: UserId = UserId(0L), name: String)
 
   final case class UserData(name: String)
 
@@ -70,6 +70,21 @@ package object model {
     case object Deposit  extends TransactionType
     case object Withdraw extends TransactionType
     case object Book     extends TransactionType
+
+    def asString(tran: TransactionType): String = tran match {
+      case Deposit  => "DEPOSIT"
+      case Withdraw => "WITHDRAW"
+      case Book     => "BOOK"
+    }
+
+    def fromString(s: String): IO[DomainError, TransactionType] =
+      s.toUpperCase() match {
+        case "DEPOSIT"  => ZIO.succeed(Deposit)
+        case "WITHDRAW" => ZIO.succeed(Withdraw)
+        case "BOOK"     => ZIO.succeed(Book)
+        case other =>
+          ZIO.fail(DomainError.ValidationError(s"Expected Deposit/Withdraw/Book, got [$other]"))
+      }
   }
 
   object TransactionId extends Subtype[Long]
@@ -82,7 +97,7 @@ package object model {
       user: UserData,
       accountNumber: AccountId,
       transactionType: TransactionType,
-      amount: BigDecimal
+      amount: Amount
   )
   final case class Transaction(
       id: TransactionId,

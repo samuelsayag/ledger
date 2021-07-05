@@ -9,7 +9,18 @@ inThisBuild(
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
     scalacOptions ++= Seq(
-      "-Wunused:imports"
+      "-Wunused:imports",
+      "-feature",
+      "-deprecation",
+      "-encoding",
+      "utf8",
+      "-Xfatal-warnings",
+      "-deprecation",
+      "-unchecked",
+      "-language:implicitConversions",
+      "-language:higherKinds",
+      "-language:existentials",
+      "-language:postfixOps"
     ),
     scalafixScalaBinaryVersion := "2.13",
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.5.0",
