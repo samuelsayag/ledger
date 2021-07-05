@@ -20,10 +20,11 @@ object SlickLedgerRepository {
           override lazy val profile = prof
           import profile.api._
 
-          val dummyId            = 0L
-          val dummyAccountId     = AccountId(0L)
-          val dummyTransactionId = TransactionId(0L)
-          val dummyPostingId     = PostingId(0L)
+          val dummyId: Long                     = 0L
+          val dummyUserId: UserId               = UserId(dummyId)
+          val dummyAccountId: AccountId         = AccountId(dummyId)
+          val dummyTransactionId: TransactionId = TransactionId(dummyId)
+          val dummyPostingId: PostingId         = PostingId(dummyId)
 
           override def createDepositAccount(
               userData: model.UserData
@@ -46,7 +47,7 @@ object SlickLedgerRepository {
 
             def insUserAndInsAccount(ex: ExecutionContext) = {
               implicit val ec: ExecutionContext = ex
-              val user                          = User(UserId(dummyId), userData.name)
+              val user                          = User(dummyUserId, userData.name)
               for {
                 userId    <- (users returning users.map(_.id)) += user
                 accountId <- insAcc(userId)
@@ -108,12 +109,20 @@ object SlickLedgerRepository {
               }
             )
 
-          private def checkBalance(userData: UserData) = ???
+          private def checkBalance(userData: UserData) =
+            for {
+              (_, a) <-
+                users join accounts on (_.id === _.userId) filter (_._1.name === userData.name)
+            } yield a.balance
 
           override def getBalance(
-              user: model.UserData,
-              account: AccountId
-          ): IO[error.DomainError, model.Account] = ???
+              user: model.UserData
+          ): IO[error.DomainError, model.Amount] = ZIO
+            .fromDBIO(checkBalance(user).result.head)
+            .provide(Has(dbp))
+            .mapError(th => DomainError.RepositoryError(new Exception(th)))
+
+          override def getTransactions(user: UserData): IO[DomainError, List[Transaction]] = ???
         }
       }
       ???
