@@ -1,18 +1,18 @@
 package ledger.business
 
-import zio._
-import ledger.business.model.{Account, Amount, Posting, Transaction, TransactionData, UserData}
 import ledger.business.error.DomainError
+import ledger.business.model._
+import zio._
 
 trait LedgerRepository {
 
   def createDepositAccount(user: UserData): IO[DomainError, Account]
 
-  def doTransaction(user: UserData, trans: TransactionData): IO[DomainError, Posting]
+  def doTransaction(user: UserData, trans: TransactionData): IO[DomainError, Unit]
 
   def getBalance(user: UserData): IO[DomainError, Amount]
 
-  def getTransactions(user: UserData): IO[DomainError, List[Transaction]]
+  def getTransactions(user: UserData): IO[DomainError, List[LedgerLine]]
 }
 
 object LedgerRepository {
@@ -25,7 +25,7 @@ object LedgerRepository {
   def doTransaction(
       user: UserData,
       trans: TransactionData
-  ): ZIO[Has[LedgerRepository], DomainError, Posting] =
+  ): ZIO[Has[LedgerRepository], DomainError, Unit] =
     ZIO.accessM(_.get.doTransaction(user, trans))
 
   def getBalance(
@@ -35,6 +35,6 @@ object LedgerRepository {
 
   def getTransactions(
       user: UserData
-  ): ZIO[Has[LedgerRepository], DomainError, List[Transaction]] =
+  ): ZIO[Has[LedgerRepository], DomainError, List[LedgerLine]] =
     ZIO.accessM(_.get.getTransactions(user))
 }

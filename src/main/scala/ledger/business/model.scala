@@ -1,6 +1,5 @@
 package ledger.business
 
-import ledger.business.error.DomainError
 import zio._
 import zio.prelude._
 
@@ -77,13 +76,12 @@ package object model {
       case Book     => "BOOK"
     }
 
-    def fromString(s: String): IO[DomainError, TransactionType] =
+    def fromString(s: String): TransactionType =
       s.toUpperCase() match {
-        case "DEPOSIT"  => ZIO.succeed(Deposit)
-        case "WITHDRAW" => ZIO.succeed(Withdraw)
-        case "BOOK"     => ZIO.succeed(Book)
-        case other =>
-          ZIO.fail(DomainError.ValidationError(s"Expected Deposit/Withdraw/Book, got [$other]"))
+        case "DEPOSIT"  => Deposit
+        case "WITHDRAW" => Withdraw
+        case "BOOK"     => Book
+        case other      => throw new Exception(s"Expected Deposit/Withdraw/Book, got [$other]")
       }
   }
 
@@ -99,6 +97,7 @@ package object model {
       transactionType: TransactionType,
       amount: Amount
   )
+
   final case class Transaction(
       id: TransactionId,
       accountNumber: AccountId,
@@ -130,60 +129,85 @@ package object model {
   )
 
   object Posting {
+
     def fromTransaction(
         tran: Transaction,
         unitCashAccount: Option[AccountId],
         userDepositAccount: Option[AccountId]
-    ): IO[DomainError, List[PostingData]] = {
+    ): Either[Exception, List[PostingData]] =
       tran.transactionType match {
         case TransactionType.Deposit =>
           unitCashAccount
             .map(cashAccount =>
-              ZIO.succeed(
+              Right(
                 List(
                   PostingData(tran.accountNumber, tran.amount, TransferType.Credit),
                   PostingData(cashAccount, tran.amount, TransferType.Debit)
                 )
               )
             )
-            .getOrElse(
-              ZIO.fail(
-                DomainError.ValidationError("Required Unit Cash Account")
-              )
-            )
+            .getOrElse(Left(new Exception("Required Unit Cash Account")))
 
         case TransactionType.Withdraw =>
           unitCashAccount
             .map(cashAccount =>
-              ZIO.succeed(
+              Right(
                 List(
                   PostingData(tran.accountNumber, tran.amount, TransferType.Debit),
                   PostingData(cashAccount, tran.amount, TransferType.Credit)
                 )
               )
             )
-            .getOrElse(
-              ZIO.fail(
-                DomainError.ValidationError("Required Unit Cash Account")
-              )
-            )
+            .getOrElse(Left(new Exception("Required Unit Cash Account")))
 
         case TransactionType.Book =>
           userDepositAccount
             .map(userAccount =>
-              ZIO.succeed(
+              Right(
                 List(
                   PostingData(tran.accountNumber, tran.amount, TransferType.Credit),
                   PostingData(userAccount, tran.amount, TransferType.Debit)
                 )
               )
             )
-            .getOrElse(
-              ZIO.fail(
-                DomainError.ValidationError("Required User Account to perform debit")
-              )
-            )
+            .getOrElse(Left(new Exception("Required User Account to perform debit")))
       }
+
+    def from(
+        id: PostingId,
+        tranId: TransactionId,
+        accId: AccountId,
+        credit: Option[Amount],
+        debit: Option[Amount]
+    ) = {
+      val (amount, tt) = (credit, debit) match {
+        case (Some(c), None) => (c, TransferType.Credit)
+        case (None, Some(c)) => (c, TransferType.Debit)
+        case _ =>
+          throw new Exception(s"Impossible to have both credit/debit or none of them in a posting")
+      }
+      Posting(id, tranId, accId, amount, tt)
     }
+
   }
+
+  final case class LedgerLine(
+      transactionId: TransactionId,
+      transactionType: TransactionType,
+      accountId: AccountId,
+      credit: Option[Amount],
+      debit: Option[Amount]
+  )
+
+  object LedgerLine {
+    def from(tran: Transaction, posting: Posting): LedgerLine =
+      LedgerLine(
+        tran.id,
+        tran.transactionType,
+        posting.accountNumber,
+        if (tran.transactionType == TransactionType.Deposit) Some(tran.amount) else None,
+        if (tran.transactionType != TransactionType.Deposit) None else Some(tran.amount)
+      )
+  }
+
 }

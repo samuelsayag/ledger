@@ -1,6 +1,7 @@
 package ledger.db
 
 import ledger.business.model.{AccountId, Amount, PostingId, TransactionId, User, UserId}
+import slick.dbio.DBIO
 import slick.jdbc.JdbcProfile
 import slick.sql.SqlProfile
 import slick.lifted.ForeignKeyQuery
@@ -44,6 +45,16 @@ trait EntityIdMappers {
     )
 }
 
+trait DBIOHelper {
+
+  implicit class Either2DBIO[B](either: Either[Throwable, B]) {
+    def toDBIO = either match {
+      case Right(b) => DBIO.successful(b)
+      case Left(th) => DBIO.failed(th)
+    }
+  }
+}
+
 trait Entities extends EntityIdMappers {
   self: Profile =>
 
@@ -63,8 +74,9 @@ trait Entities extends EntityIdMappers {
     def id: Rep[AccountId]       = column[AccountId]("id", O.PrimaryKey, O.AutoInc)
     def balance: Rep[Amount]     = column[Amount]("balance", NotNull)
     def accountType: Rep[String] = column[String]("accountType", NotNull)
-    def userId: Rep[Option[ledger.business.model.UserId]]                   = column[Option[UserId]]("userId", Nullable)
-    def *                        = (id, balance, accountType, userId)
+    def userId: Rep[Option[ledger.business.model.UserId]] =
+      column[Option[UserId]]("userId", Nullable)
+    def * = (id, balance, accountType, userId)
     def accountUsers: ForeignKeyQuery[Users, User] =
       foreignKey("ACC_USER_FK", userId, users)(
         _.id.?,
@@ -100,12 +112,14 @@ trait Entities extends EntityIdMappers {
         tag,
         "postings"
       ) {
-    def id: Rep[ledger.business.model.PostingId]            = column[PostingId]("id", O.PrimaryKey, O.AutoInc)
-    def transactionId: Rep[ledger.business.model.TransactionId] = column[TransactionId]("transactionId", NotNull)
-    def accountId: Rep[ledger.business.model.AccountId]     = column[AccountId]("accountId", NotNull)
-    def credit: Rep[Option[ledger.business.model.Amount]]        = column[Option[Amount]]("credit", Nullable)
-    def debit: Rep[Option[ledger.business.model.Amount]]         = column[Option[Amount]]("debit", Nullable)
-    def *             = (id, transactionId, accountId, credit, debit)
+    def id: Rep[ledger.business.model.PostingId] = column[PostingId]("id", O.PrimaryKey, O.AutoInc)
+    def transactionId: Rep[ledger.business.model.TransactionId] =
+      column[TransactionId]("transactionId", NotNull)
+    def accountId: Rep[ledger.business.model.AccountId] = column[AccountId]("accountId", NotNull)
+    def credit: Rep[Option[ledger.business.model.Amount]] =
+      column[Option[Amount]]("credit", Nullable)
+    def debit: Rep[Option[ledger.business.model.Amount]] = column[Option[Amount]]("debit", Nullable)
+    def *                                                = (id, transactionId, accountId, credit, debit)
     def postingTransaction: ForeignKeyQuery[
       Transactions,
       (TransactionId, AccountId, String, Amount)
