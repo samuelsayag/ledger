@@ -129,7 +129,6 @@ package object model {
   )
 
   object Posting {
-
     def fromTransaction(
         tran: Transaction,
         unitCashAccount: Option[AccountId],
@@ -153,8 +152,8 @@ package object model {
             .map(cashAccount =>
               Right(
                 List(
-                  PostingData(tran.accountNumber, tran.amount, TransferType.Debit),
-                  PostingData(cashAccount, tran.amount, TransferType.Credit)
+                  PostingData(tran.accountNumber, Amount(tran.amount * -1), TransferType.Debit),
+                  PostingData(cashAccount, Amount(tran.amount * -1), TransferType.Credit)
                 )
               )
             )
@@ -166,7 +165,7 @@ package object model {
               Right(
                 List(
                   PostingData(tran.accountNumber, tran.amount, TransferType.Credit),
-                  PostingData(userAccount, tran.amount, TransferType.Debit)
+                  PostingData(userAccount, Amount(tran.amount * -1), TransferType.Debit)
                 )
               )
             )
@@ -179,7 +178,7 @@ package object model {
         accId: AccountId,
         credit: Option[Amount],
         debit: Option[Amount]
-    ) = {
+    ): Posting = {
       val (amount, tt) = (credit, debit) match {
         case (Some(c), None) => (c, TransferType.Credit)
         case (None, Some(c)) => (c, TransferType.Debit)

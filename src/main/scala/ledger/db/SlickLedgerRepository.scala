@@ -91,6 +91,7 @@ object SlickLedgerRepository {
                   .fromTransaction(tran, Some(unitCashAccount), Some(userAccountId))
                   .toDBIO
                 _ <- insertPostings(transId, postings)
+                _ <- DBIO.sequence(postings.map(p => updateBalance(p)))
               } yield ()).transactionally
             }
 
@@ -183,9 +184,18 @@ object SlickLedgerRepository {
               }
             )
 
+          private def updateBalance(post: PostingData)(implicit ec: ExecutionContext) = {
+            for {
+              currBalance <- accounts.filter(_.id === post.accountNumber).map(_.balance).result
+              newBalance = Amount(currBalance.head + post.amount)
+              _ <- updateBalanceQuery(post.accountNumber, newBalance)
+            } yield ()
+          }
+
           private def updateBalanceQuery(accountId: AccountId, newBalance: Amount) =
-            (for { acc <- accounts.filter(_.id === accountId) } yield acc.balance)
-              .update(newBalance)
+            (for {
+              acc <- accounts.filter(_.id === accountId)
+            } yield acc.balance).update(newBalance)
 
           private def checkBalance(
               user: UserData,

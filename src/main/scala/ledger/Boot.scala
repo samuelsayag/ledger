@@ -1,12 +1,15 @@
 package ledger
 
 import com.typesafe.config.{Config, ConfigFactory}
+import ledger.business.LedgerRepository
+import ledger.db.SlickLedgerRepository
 import ledger.db.init.{InitDb, InitDbLive}
+import ledger.test.TestLedger
 import slick.interop.zio.DatabaseProvider
 import slick.jdbc.JdbcProfile
 import zio.{App => ZIOApp, _}
-import zio.console._
-import zio.clock._
+import ledger.business.error
+import zio.clock.Clock
 
 object Boot extends ZIOApp {
 
@@ -17,10 +20,17 @@ object Boot extends ZIOApp {
 
   lazy val program = initDb
 
-  lazy val initDb: RIO[Has[InitDb] with Console with Clock, Int] =
-    InitDb.initDb *> ZIO.succeed(1)
+  lazy val initDb: ZIO[Has[InitDb] with zio.console.Console with Clock with Has[
+    LedgerRepository
+  ], error.DomainError, Int] =
+    InitDb.initDb *>
+      TestLedger.testDataInsert *>
+      ZIO.succeed(1)
 
-  def appEnvironment(typeSafeconfig: Config): TaskLayer[Has[InitDb]] = {
+  //lazy val initDb: RIO[Has[InitDb] with Console with Clock, Int] =
+  //  InitDb.initDb *> ZIO.succeed(1)
+
+  def appEnvironment(typeSafeconfig: Config): TaskLayer[Has[InitDb] with Has[LedgerRepository]] = {
 
     val dbConfigLayer: TaskLayer[Has[Config]] =
       ZLayer.fromEffect(ZIO(typeSafeconfig.getConfig("db")))
@@ -31,7 +41,8 @@ object Boot extends ZIOApp {
     val dbProvider: TaskLayer[Has[DatabaseProvider]] =
       (dbConfigLayer ++ dbBackendLayer) >>> DatabaseProvider.live
 
-    dbProvider >>> InitDbLive.layer
+    (dbProvider >>> InitDbLive.layer) ++
+      (dbProvider >>> SlickLedgerRepository.live)
   }
 
 }

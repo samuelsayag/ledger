@@ -5,6 +5,7 @@ import slick.dbio.DBIO
 import slick.jdbc.JdbcProfile
 import slick.sql.SqlProfile
 import slick.lifted.ForeignKeyQuery
+import slick.dbio.{DBIOAction, Effect, NoStream}
 
 trait Profile {
   val profile: JdbcProfile
@@ -48,7 +49,7 @@ trait EntityIdMappers {
 trait DBIOHelper {
 
   implicit class Either2DBIO[B](either: Either[Throwable, B]) {
-    def toDBIO = either match {
+    def toDBIO: DBIOAction[B, NoStream, Effect] = either match {
       case Right(b) => DBIO.successful(b)
       case Left(th) => DBIO.failed(th)
     }

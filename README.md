@@ -1,6 +1,6 @@
 Ledger
 ======
 
-Exercise for Unit
+Hiring exercise
 
 API that provide banking services.
