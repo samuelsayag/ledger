@@ -1,7 +1,6 @@
 package ledger.db
 
 import ledger.business.error.DomainError
-import ledger.business.error.DomainError.RepositoryError
 import ledger.business.model.{AccountId, Amount, TransactionId, _}
 import ledger.business.{LedgerRepository, error, model}
 import slick.interop.zio.DatabaseProvider
@@ -58,20 +57,16 @@ object SlickLedgerRepository {
             val createAccount = ZIO
               .fromDBIO(selUserAndInsAcc _)
               .orElse(ZIO.fromDBIO(insUserAndInsAccount _))
+              .mapError(DomainError.fromThrowable)
 
             (for {
               userAndAccount <- createAccount
               (user, (accountId, balance, accountType, _)) = userAndAccount
               accountType <- AccountType.make(accountType, Some(user))
-            } yield Account(accountId, balance, accountType))
-              .refineOrDie { case e: Exception =>
-                RepositoryError(e): DomainError
-              }
-              .provide(Has(dbp))
+            } yield Account(accountId, balance, accountType)).provide(Has(dbp))
           }
 
           override def doTransaction(
-              user: UserData,
               trans: model.TransactionData
           ): IO[error.DomainError, Unit] = {
 
@@ -81,7 +76,7 @@ object SlickLedgerRepository {
                 transId          <- insertTransaction(trans)
                 unitCashAccounts <- getUnitCashAccount.map(_.id).result
                 unitCashAccount = unitCashAccounts.head
-                userAccountIds <- getUserAccountId(user).result
+                userAccountIds <- getUserAccountId(trans.user).result
                 userAccountId = userAccountIds.head
                 transactions <- getTransaction(transId).result
                 tran = transactions.map { case (transId, accId, transType, amount) =>
@@ -96,17 +91,32 @@ object SlickLedgerRepository {
             }
 
             (for {
-              _ <- checkBalance(user, trans)
+              _ <- checkBalance(trans)
               _ <- ZIO.fromDBIO(func).mapError(th => DomainError.RepositoryError(new Exception(th)))
             } yield ()).provide(Has(dbp))
           }
+
+          override def getAccount(user: UserData): IO[DomainError, Account] =
+            (for {
+              accRes <- ZIO
+                .fromDBIO(getUserAccount(user).result.head)
+                .mapError(DomainError.fromThrowable)
+              (accId, amount, accType, optUserid) = accRes
+              accountType <- optUserid match {
+                case Some(userId) => AccountType.make(accType, Some(User(userId, user.name)))
+                case None =>
+                  ZIO.fail(
+                    DomainError.fromMsg(s"Deposit Account must have userId. UserData [$user]")
+                  )
+              }
+            } yield Account(accId, amount, accountType)).provide(Has(dbp))
 
           override def getBalance(
               user: model.UserData
           ): IO[error.DomainError, model.Amount] = ZIO
             .fromDBIO(getBalanceQuery(user).result.head)
+            .mapError(DomainError.fromThrowable)
             .provide(Has(dbp))
-            .mapError(th => DomainError.RepositoryError(new Exception(th)))
 
           override def getTransactions(user: UserData): IO[DomainError, List[LedgerLine]] = {
             def rawLedger(accountId: AccountId) =
@@ -198,14 +208,13 @@ object SlickLedgerRepository {
             } yield acc.balance).update(newBalance)
 
           private def checkBalance(
-              user: UserData,
               trans: model.TransactionData
           ): IO[DomainError, Amount] =
             if (
               trans.transactionType == TransactionType.Withdraw ||
               trans.transactionType == TransactionType.Book
             )
-              getBalance(user).flatMap(amount =>
+              getBalance(trans.user).flatMap(amount =>
                 if (amount - trans.amount < 0)
                   ZIO.fail(
                     DomainError.RepositoryError(

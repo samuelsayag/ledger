@@ -37,11 +37,17 @@ lazy val root = (project in file("."))
       `zio-test`,
       `zio-test-sbt`,
       `zio-test-magnolia`,
+      `zio-json`,
       slick,
       `slick-hikaricp`,
       `zio-slick-interop`,
       postgres,
-      logback
+      logback,
+      akkaActor,
+      akkaStream,
+      akkaHttp,
+      akkaHttpZioJson,
+      akkaHttpZioInterop
     )
   )
 

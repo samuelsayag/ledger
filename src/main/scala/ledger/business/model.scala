@@ -1,6 +1,8 @@
 package ledger.business
 
+import ledger.business.error.DomainError
 import zio._
+import zio.json.{JsonCodec, JsonDecoder, JsonEncoder}
 import zio.prelude._
 
 package object model {
@@ -29,6 +31,7 @@ package object model {
         else
           ZIO.fail(new IllegalArgumentException(s"Expected 'CASH' found [$s]"))
     }
+
     final case class Deposit(owner: User) extends AccountType
     object Deposit {
       def make(
@@ -45,22 +48,26 @@ package object model {
     def make(
         accountType: String,
         user: Option[User]
-    ): IO[IllegalArgumentException, AccountType] =
-      (accountType, user) match {
+    ): IO[DomainError, AccountType] =
+      ((accountType, user) match {
         case (at, Some(user)) => Deposit.make(at, user)
         case (at, None)       => Cash.make(at)
-      }
+      }).mapError(DomainError.RepositoryError)
   }
 
   /** A general class for all types of accounts
     * The owner information will appear only if it is a {{AccountType.Deposit}}
     */
-  object AccountId extends Subtype[Long]
+  object AccountId extends Subtype[Long] {
+    implicit val enc: JsonEncoder[AccountId] = JsonEncoder.long.contramap(_.toLong)
+    implicit val dec: JsonDecoder[AccountId] = JsonDecoder.long.map(AccountId(_))
+    implicit val codec: JsonCodec[AccountId] = JsonCodec(enc, dec)
+  }
   type AccountId = AccountId.Type
 
   final case class Account(
       number: AccountId,
-      balance: BigDecimal,
+      balance: Amount,
       accountType: AccountType
   )
 
@@ -88,7 +95,11 @@ package object model {
   object TransactionId extends Subtype[Long]
   type TransactionId = TransactionId.Type
 
-  object Amount extends Subtype[BigDecimal]
+  object Amount extends Subtype[BigDecimal] {
+    implicit val enc: JsonEncoder[Amount] = JsonEncoder.bigDecimal.contramap(_.bigDecimal)
+    implicit val dec: JsonDecoder[Amount] = JsonDecoder.bigDecimal.map(Amount(_))
+    implicit val codec: JsonCodec[Amount] = JsonCodec(enc, dec)
+  }
   type Amount = Amount.Type
 
   final case class TransactionData(
@@ -205,7 +216,7 @@ package object model {
         tran.transactionType,
         posting.accountNumber,
         if (tran.transactionType == TransactionType.Deposit) Some(tran.amount) else None,
-        if (tran.transactionType != TransactionType.Deposit) None else Some(tran.amount)
+        if (tran.transactionType == TransactionType.Deposit) None else Some(tran.amount)
       )
   }
 
