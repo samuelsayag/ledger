@@ -2,19 +2,12 @@ package ledger.app
 
 import ledger.business.LedgerRepository
 import ledger.business.error.DomainError
-import ledger.business.model.{
-  Account,
-  Amount,
-  LedgerLine,
-  TransactionData,
-  TransactionType,
-  UserData
-}
-import zio.{Has, IO, URLayer, ZIO, ZLayer}
+import ledger.business.model._
+import zio._
 
 trait App {
 
-  def createDepositAccount(user: UserData): IO[DomainError, Account]
+  def createDepositAccount(user: UserData): IO[DomainError, AccountId]
 
   def doTransaction(transactionRequest: TransactionRequest): IO[DomainError, Unit]
 
@@ -30,8 +23,8 @@ object App {
     ZLayer.fromService { ledgerRepo =>
       import TransactionRequest._
       new App {
-        override def createDepositAccount(user: UserData): IO[DomainError, Account] =
-          ledgerRepo.createDepositAccount(user)
+        override def createDepositAccount(user: UserData): IO[DomainError, AccountId] =
+          ledgerRepo.createDepositAccount(user).map(_.number)
 
         override def doTransaction(transactionRequest: TransactionRequest): IO[DomainError, Unit] =
           (transactionRequest match {
@@ -62,7 +55,7 @@ object App {
       }
     }
 
-  def createDepositAccount(user: UserData): ZIO[Has[App], DomainError, Account] =
+  def createDepositAccount(user: UserData): ZIO[Has[App], DomainError, AccountId] =
     ZIO.accessM(_.get.createDepositAccount(user))
 
   def doTransaction(transactionRequest: TransactionRequest): ZIO[Has[App], DomainError, Unit] =

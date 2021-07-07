@@ -2,7 +2,7 @@ package ledger.business
 
 import ledger.business.error.DomainError
 import zio._
-import zio.json.{JsonCodec, JsonDecoder, JsonEncoder}
+import zio.json.{DeriveJsonCodec, JsonCodec, JsonDecoder, JsonEncoder}
 import zio.prelude._
 
 package object model {
@@ -59,9 +59,8 @@ package object model {
     * The owner information will appear only if it is a {{AccountType.Deposit}}
     */
   object AccountId extends Subtype[Long] {
-    implicit val enc: JsonEncoder[AccountId] = JsonEncoder.long.contramap(_.toLong)
-    implicit val dec: JsonDecoder[AccountId] = JsonDecoder.long.map(AccountId(_))
-    implicit val codec: JsonCodec[AccountId] = JsonCodec(enc, dec)
+    implicit val codec: JsonCodec[AccountId] =
+      JsonCodec(JsonEncoder.long.contramap(_.toLong), JsonDecoder.long.map(AccountId(_)))
   }
   type AccountId = AccountId.Type
 
@@ -76,6 +75,8 @@ package object model {
     case object Deposit  extends TransactionType
     case object Withdraw extends TransactionType
     case object Book     extends TransactionType
+
+    implicit val codec: JsonCodec[TransactionType] = DeriveJsonCodec.gen[TransactionType]
 
     def asString(tran: TransactionType): String = tran match {
       case Deposit  => "DEPOSIT"
@@ -92,13 +93,17 @@ package object model {
       }
   }
 
-  object TransactionId extends Subtype[Long]
+  object TransactionId extends Subtype[Long] {
+    implicit val codec: JsonCodec[TransactionId] =
+      JsonCodec(JsonEncoder.long.contramap(_.toLong), JsonDecoder.long.map(TransactionId(_)))
+  }
   type TransactionId = TransactionId.Type
 
   object Amount extends Subtype[BigDecimal] {
-    implicit val enc: JsonEncoder[Amount] = JsonEncoder.bigDecimal.contramap(_.bigDecimal)
-    implicit val dec: JsonDecoder[Amount] = JsonDecoder.bigDecimal.map(Amount(_))
-    implicit val codec: JsonCodec[Amount] = JsonCodec(enc, dec)
+    implicit val codec: JsonCodec[Amount] = JsonCodec(
+      JsonEncoder.bigDecimal.contramap(_.bigDecimal),
+      JsonDecoder.bigDecimal.map(Amount(_))
+    )
   }
   type Amount = Amount.Type
 
@@ -210,6 +215,8 @@ package object model {
   )
 
   object LedgerLine {
+    implicit val codec: JsonCodec[LedgerLine] = DeriveJsonCodec.gen[LedgerLine]
+
     def from(tran: Transaction, posting: Posting): LedgerLine =
       LedgerLine(
         tran.id,

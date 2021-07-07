@@ -28,6 +28,8 @@ inThisBuild(
   )
 )
 
+addCommandAlias("sff", ";scalafmtAll;scalafixAll")
+
 lazy val root = (project in file("."))
   .settings(
     name := "ledger",
