@@ -1,8 +1,8 @@
 package ledger.business
 
 import ledger.business.error.DomainError
-import zio._
 import zio.json.{DeriveJsonCodec, JsonCodec, JsonDecoder, JsonEncoder}
+import zio.{IO, ZIO}
 import zio.prelude._
 
 package object model {
@@ -12,10 +12,18 @@ package object model {
   /** - id: Could have restriction on the format (create new type for that)
     * - name: Could have restriction on the format (create new type for that)
     */
-  object UserId extends Subtype[Long]
+  object UserId extends Subtype[Long] {
+    implicit val codec: JsonCodec[UserId] =
+      JsonCodec(JsonEncoder.long.contramap(_.toLong), JsonDecoder.long.map(UserId(_)))
+  }
   type UserId = UserId.Type
 
   final case class User(id: UserId = UserId(0L), name: String)
+
+  object User {
+    implicit val codec: JsonCodec[User] =
+      DeriveJsonCodec.gen[User]
+  }
 
   final case class UserData(name: String)
 
@@ -53,6 +61,9 @@ package object model {
         case (at, Some(user)) => Deposit.make(at, user)
         case (at, None)       => Cash.make(at)
       }).mapError(DomainError.RepositoryError)
+
+    implicit val codec: JsonCodec[AccountType] =
+      DeriveJsonCodec.gen[AccountType]
   }
 
   /** A general class for all types of accounts
@@ -69,6 +80,10 @@ package object model {
       balance: Amount,
       accountType: AccountType
   )
+
+  object Account {
+    implicit val codec: JsonCodec[Account] = DeriveJsonCodec.gen[Account]
+  }
 
   sealed trait TransactionType
   object TransactionType {

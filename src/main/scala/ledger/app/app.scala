@@ -8,9 +8,9 @@ package object app {
 
   sealed trait TransactionRequest
   object TransactionRequest {
-    final case class DepositTransaction(name: String, amount: Amount)  extends TransactionRequest
-    final case class WithdrawTransaction(name: String, amount: Amount) extends TransactionRequest
-    final case class BookTransaction(name: String, amount: Amount, accountId: AccountId)
+    final case class Deposit(name: String, amount: Amount)  extends TransactionRequest
+    final case class Withdraw(name: String, amount: Amount) extends TransactionRequest
+    final case class Book(name: String, amount: Amount, accountId: AccountId)
         extends TransactionRequest
 
     implicit val codec: JsonCodec[TransactionRequest] = DeriveJsonCodec.gen[TransactionRequest]

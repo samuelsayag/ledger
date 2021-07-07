@@ -1,6 +1,5 @@
 package ledger.api
 
-import akka.event.Logging.DebugLevel
 import akka.http.interop._
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
@@ -29,34 +28,36 @@ object Api {
         override def routes: Route = ledgerRoutes
 
         val ledgerRoutes: Route =
-          pathPrefix("/account/put") {
-            decodeRequest {
-              logRequestResult("account:put", DebugLevel) {
+          pathPrefix("account") {
+            path("put") {
+              post {
+                entity(Directives.as[UserData]) { userData =>
+                  complete(App.createDepositAccount(userData).provide(app))
+                }
+              }
+            } ~
+              path("get") {
                 post {
-                  entity(Directives.as[UserData]) { userData =>
-                    complete(App.createDepositAccount(userData).provide(app))
+                  entity(Directives.as[UserData]) { tran =>
+                    complete(App.getBalance(tran).provide(app))
                   }
                 }
               }
-            }
-          } ~ pathPrefix("transaction/put") {
-            post {
-              entity(Directives.as[TransactionRequest]) { tran =>
-                complete(App.doTransaction(tran).provide(app).as[Json.Obj](Json.Obj(Chunk.empty)))
+          } ~ pathPrefix("transaction") {
+            path("put") {
+              post {
+                entity(Directives.as[TransactionRequest]) { tran =>
+                  complete(App.doTransaction(tran).provide(app).as[Json.Obj](Json.Obj(Chunk.empty)))
+                }
               }
-            }
-          } ~ pathPrefix("balance/get") {
-            post {
-              entity(Directives.as[UserData]) { tran =>
-                complete(App.getBalance(tran).provide(app))
+            } ~
+              path("get") {
+                post {
+                  entity(Directives.as[UserData]) { tran =>
+                    complete(App.getTransactions(tran).provide(app))
+                  }
+                }
               }
-            }
-          } ~ pathPrefix("transaction/get") {
-            post {
-              entity(Directives.as[UserData]) { tran =>
-                complete(App.getBalance(tran).provide(app))
-              }
-            }
           }
       }
     }

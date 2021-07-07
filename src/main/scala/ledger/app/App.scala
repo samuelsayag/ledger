@@ -11,7 +11,7 @@ trait App {
 
   def doTransaction(transactionRequest: TransactionRequest): IO[DomainError, Unit]
 
-  def getBalance(user: UserData): IO[DomainError, Amount]
+  def getBalance(user: UserData): IO[DomainError, Account]
 
   def getTransactions(user: UserData): IO[DomainError, List[LedgerLine]]
 
@@ -28,27 +28,27 @@ object App {
 
         override def doTransaction(transactionRequest: TransactionRequest): IO[DomainError, Unit] =
           (transactionRequest match {
-            case DepositTransaction(name, amount) =>
+            case Deposit(name, amount) =>
               val userData = UserData(name)
               ledgerRepo
                 .getAccount(userData)
                 .map(acc => TransactionData(userData, acc.number, TransactionType.Deposit, amount))
 
-            case WithdrawTransaction(name, amount) =>
+            case Withdraw(name, amount) =>
               val userData = UserData(name)
               ledgerRepo
                 .getAccount(userData)
                 .map(acc => TransactionData(userData, acc.number, TransactionType.Withdraw, amount))
 
-            case BookTransaction(name, amount, accountId) =>
+            case Book(name, amount, accountId) =>
               val userData = UserData(name)
               ZIO.succeed(
                 TransactionData(userData, accountId, TransactionType.Withdraw, amount)
               )
           }).flatMap(ledgerRepo.doTransaction)
 
-        override def getBalance(user: UserData): IO[DomainError, Amount] =
-          ledgerRepo.getBalance(user)
+        override def getBalance(user: UserData): IO[DomainError, Account] =
+          ledgerRepo.getAccount(user)
 
         override def getTransactions(user: UserData): IO[DomainError, List[LedgerLine]] =
           ledgerRepo.getTransactions(user)
@@ -61,7 +61,7 @@ object App {
   def doTransaction(transactionRequest: TransactionRequest): ZIO[Has[App], DomainError, Unit] =
     ZIO.accessM(_.get.doTransaction(transactionRequest))
 
-  def getBalance(user: UserData): ZIO[Has[App], DomainError, Amount] =
+  def getBalance(user: UserData): ZIO[Has[App], DomainError, Account] =
     ZIO.accessM(_.get.getBalance(user))
 
   def getTransactions(user: UserData): ZIO[Has[App], DomainError, List[LedgerLine]] =
