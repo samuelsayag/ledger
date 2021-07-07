@@ -45,6 +45,7 @@ lazy val root = (project in file("."))
       `zio-slick-interop`,
       postgres,
       logback,
+      slf4j,
       akkaActor,
       akkaStream,
       akkaHttp,

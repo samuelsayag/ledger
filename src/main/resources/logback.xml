@@ -28,10 +28,7 @@
     <appender-ref ref="STDOUT" />
   </appender>
 
-  <logger name="akka" level="DEBUG" />
-  <logger name="slick" level="INFO" />
-
-  <root level="INFO">
+  <root level="DEBUG">
     <appender-ref ref="ASYNCFILE" />
     <appender-ref ref="ASYNCSTDOUT" />
   </root>

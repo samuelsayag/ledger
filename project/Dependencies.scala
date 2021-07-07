@@ -1,14 +1,14 @@
 import sbt._
 
 object Dependencies {
-  val slickVersion = "3.3.3"
-  val zioVersion = "1.0.9"
-  val AkkaVersion = "2.6.8"
+  val slickVersion    = "3.3.3"
+  val zioVersion      = "1.0.9"
+  val AkkaVersion     = "2.6.8"
   val AkkaHttpVersion = "10.2.4"
 
-  lazy val zio = "dev.zio" %% "zio" % zioVersion
-  lazy val `zio-prelude` = "dev.zio" %% "zio-prelude" % "1.0.0-RC5"
-  lazy val `zio-test` = "dev.zio" %% "zio-test" % zioVersion % Test
+  lazy val zio            = "dev.zio" %% "zio"          % zioVersion
+  lazy val `zio-prelude`  = "dev.zio" %% "zio-prelude"  % "1.0.0-RC5"
+  lazy val `zio-test`     = "dev.zio" %% "zio-test"     % zioVersion % Test
   lazy val `zio-test-sbt` = "dev.zio" %% "zio-test-sbt" % zioVersion % Test
   lazy val `zio-test-magnolia` =
     "dev.zio" %% "zio-test-magnolia" % zioVersion % Test // optional
@@ -22,12 +22,12 @@ object Dependencies {
   lazy val postgres = "org.postgresql" % "postgresql" % "42.2.22"
 
   lazy val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
+  lazy val slf4j   = "org.slf4j"      % "slf4j-api"       % "1.7.31"
 
-  lazy val akkaHttpZioJson =  "de.heikoseeberger" %% "akka-http-zio-json" % "1.36.0"
- lazy val akkaHttpZioInterop  = "io.scalac" %% "zio-akka-http-interop" % "0.4.0"
+  lazy val akkaHttpZioJson    = "de.heikoseeberger" %% "akka-http-zio-json"    % "1.36.0"
+  lazy val akkaHttpZioInterop = "io.scalac"         %% "zio-akka-http-interop" % "0.4.0"
 
-  lazy val akkaActor = "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion
-  lazy val akkaStream = "com.typesafe.akka" %% "akka-stream" % AkkaVersion
-  lazy val akkaHttp = "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion
+  lazy val akkaActor  = "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion
+  lazy val akkaStream = "com.typesafe.akka" %% "akka-stream"      % AkkaVersion
+  lazy val akkaHttp   = "com.typesafe.akka" %% "akka-http"        % AkkaHttpVersion
 }
-

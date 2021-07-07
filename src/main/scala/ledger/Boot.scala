@@ -14,6 +14,7 @@ import slick.interop.zio.DatabaseProvider
 import slick.jdbc.JdbcProfile
 import zio.{App => ZIOApp, _}
 import ledger.business.error
+import ledger.business.error.DomainError
 import zio.clock.Clock
 import zio.console.putStrLn
 
@@ -24,11 +25,15 @@ object Boot extends ZIOApp {
 
   lazy val program = app
 
-  lazy val app: ZIO[HttpServer with zio.console.Console with Has[InitDb] with zio.console.Console with Clock,Object,Nothing] = {
+  lazy val app: ZIO[HttpServer with zio.console.Console with Has[
+    InitDb
+  ] with zio.console.Console with Clock, Object, Nothing] = {
     val startHttpServer =
-      HttpServer.start.tapM(_ => putStrLn("Server online."))
+      HttpServer.start
+        .tapM(_ => putStrLn("Server online."))
+        .mapError(DomainError.fromThrowable)
 
-    (startHttpServer *> InitDb.initDb.toManaged_).useForever
+    (InitDb.initDb.toManaged_ *> startHttpServer).useForever
   }
 
   lazy val testData: ZIO[Has[InitDb] with zio.console.Console with Clock with Has[
@@ -49,7 +54,7 @@ object Boot extends ZIOApp {
     val serverConf: TaskLayer[Has[HttpServer.Config]] =
       typeSafeConfig.map(c =>
         Has {
-          val conf = c.get.getConfig("api")
+          val conf = c.get.getConfig("server")
           HttpServer.Config(
             conf.getString("host"),
             conf.getInt("port")
