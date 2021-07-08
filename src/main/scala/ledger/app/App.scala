@@ -23,8 +23,18 @@ object App {
     ZLayer.fromService { ledgerRepo =>
       import TransactionRequest._
       new App {
-        override def createDepositAccount(user: UserData): IO[DomainError, AccountId] =
-          ledgerRepo.createDepositAccount(user).map(_.number)
+        override def createDepositAccount(user: UserData): IO[DomainError, AccountId] = {
+          for {
+            acc <- ledgerRepo.getAccount(user.normalize()).map(Some(_)).orElse(ZIO.succeed(None))
+            accCreation <-
+              acc match {
+                case None => ledgerRepo.createDepositAccount(user.normalize()).map(_.number)
+                case Some(_) =>
+                  ZIO.fail(DomainError.ValidationError(s"User [$user] already has an account"))
+              }
+
+          } yield accCreation
+        }
 
         override def doTransaction(transactionRequest: TransactionRequest): IO[DomainError, Unit] =
           (transactionRequest match {

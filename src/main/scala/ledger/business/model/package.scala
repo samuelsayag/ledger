@@ -25,7 +25,10 @@ package object model {
       DeriveJsonCodec.gen[User]
   }
 
-  final case class UserData(name: String)
+  final case class UserData(name: String) {
+    def normalize(): UserData =
+      this.copy(name = name.toUpperCase())
+  }
 
   /** Type of Accounts handle bu Unit
     * - Deposit: Unit liability
