@@ -11,6 +11,8 @@ import zio.console._
 import zio.duration._
 import zio.{Has, RIO, Schedule, Task, UIO, ZIO, ZLayer}
 
+import scala.concurrent.ExecutionContext
+
 trait InitDb {
 
   /** make a simple request on account table for instance
@@ -46,17 +48,8 @@ object InitDb {
   // TODO - make it generic with a parameter
   def checkConnection(): ZIO[Has[InitDb] with Console with Clock, Exception, Int] = {
     val notAvailable = (_: String).contains("Connection is not available")
-    val notCreated   = (_: String).contains("does not exist")
     val spaced1Sec   = Schedule.spaced(1.second)
     checkbase()
-      .foldM(
-        {
-          case e: Exception if notCreated(e.getMessage) =>
-            ZIO.succeed(0)
-          case e => ZIO.fail(e)
-        },
-        ZIO.succeed(_)
-      )
       .refineOrDie {
         case e: Exception if notAvailable(e.getMessage) => e
       }
@@ -88,17 +81,15 @@ case class InitDbLive(
 
   import profile.api._
 
-  override def checkbase(): Task[Int] = {
-    val query = accounts.length.result
-    ZIO.fromDBIO(query).provide(Has(dbp))
-  }
+  override def checkbase(): Task[Int] =
+    ZIO.fromDBIO(sql"""select 1""".as[Int].head).provide(Has(dbp))
 
   override def creabase(): Task[Unit] =
     ZIO
-      .fromDBIO(
+      .fromDBIO((ec: ExecutionContext) =>
         DBIO.seq(
           schemaBase.createIfNotExists,
-          accounts += (AccountId(0L), Amount(BigDecimal(0)), "CASH", Option.empty[UserId])
+          createCashIfNotExist(ec)
         )
       )
       .provide(Has(dbp))
@@ -107,6 +98,19 @@ case class InitDbLive(
     ZIO.succeed(
       schemaBase.createStatements.toList.mkString(System.lineSeparator())
     )
+
+  private def createCashIfNotExist(implicit ec: ExecutionContext) = {
+    for {
+      accs <- accounts.filter(acc => acc.userId.isEmpty && acc.accountType === "CASH").result
+      _ <- accs.headOption match {
+        case Some(_) => accounts.filter(_.userId.isEmpty).map(_.id).result
+        case None =>
+          accounts returning accounts.map(_.id) += (AccountId(0L), Amount(
+            BigDecimal(0)
+          ), "CASH", Option.empty[UserId])
+      }
+    } yield ()
+  }
 
   private val schemaBase =
     users.schema ++
