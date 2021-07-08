@@ -185,8 +185,4 @@ Server: akka-http/10.2.4
 Bugs
 ----
 
-While playing with it I see some bugs that still need fixing:
-
-* Restart the database reinsert a CASH account (should be unique)
-* Can create account with the same user multiple time
-* ...
+Still playing with the service to fix them...
